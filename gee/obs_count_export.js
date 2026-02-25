@@ -1,7 +1,8 @@
 /***************************************
  * CONUS-30m-LAI: Observation Density — Export Results
  *
- * Exports all observation density statistics to Google Drive:
+ * Exports all observation density statistics to Google Drive.
+ * Statistics are averaged across the full dataset period (2000–2022).
  *
  *   CSV outputs (small, fast):
  *     1. monthly_obs_stats.csv    — mean/median/p10/p25/p75/p90 by month
@@ -18,7 +19,10 @@
  ***************************************/
 
 /********** CONFIG **********/
-var YEARS        = [2000, 2005, 2010, 2015, 2020, 2022]; // years to average over
+// All years in the dataset (2000–2022) for statistics that represent the full period
+var YEARS        = [2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,
+                    2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,
+                    2020,2021,2022];
 var CLOUD_LIMIT  = 50;          // scene-level cloud cover threshold (%)
 var SAMPLE_SCALE = 5000;        // 5 km — for CSV stats (fast)
 var MAP_SCALE    = 500;         // 500 m — for exported GeoTIFF maps
