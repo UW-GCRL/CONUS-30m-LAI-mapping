@@ -17,7 +17,7 @@ Algorithm
 3. For each state tile:
    a. Warp to the reference grid via WarpedVRT (nearest resampling).
    b. Process block-by-block (default 512x512 pixels).
-   c. Apply scale factor 0.01 (converts uint16 x100 to real LAI units).
+   c. Apply scale factor 0.001 (converts int16 x100 to real LAI units).
    d. Write valid pixels to the output (merge policy: last-one-wins).
 4. Build overview levels (2, 4, 8, 16, 32) for fast display.
 
@@ -53,7 +53,7 @@ def merge_continuous_to_ref_grid(
     resampling=Resampling.nearest,
     compress="LZW",
     bigtiff="IF_SAFER",
-    scale_factor=0.01,
+    scale_factor=0.001,
 ):
     """
     Merge continuous rasters (e.g., LAI) onto the exact grid of ref_tif.
@@ -87,7 +87,7 @@ def merge_continuous_to_ref_grid(
         BigTIFF mode (default: 'IF_SAFER').
     scale_factor : float
         Multiply valid source pixels by this value before writing.
-        Use 0.01 to convert LAI stored as uint16 x100 to real units.
+        Use 0.001 to convert LAI stored as int16 x100 to real units.
     """
     in_dir = Path(in_dir)
     tifs = sorted(in_dir.rglob("*.tif") if recursive else in_dir.glob("*.tif"))
@@ -169,7 +169,7 @@ def merge_continuous_to_ref_grid(
                             dest_valid = src_valid_fn(dest_block, dst_nodata)
                             src_valid  = src_valid_fn(src_block,  dst_nodata)
 
-                            # Scale valid pixels from uint16 x100 to real LAI
+                            # Scale valid pixels from int16 x1000 to real LAI
                             if scale_factor is not None and scale_factor != 1.0:
                                 src_block_scaled = src_block.astype("float32", copy=False)
                                 src_block_scaled[src_valid] = (
@@ -233,5 +233,5 @@ if __name__ == "__main__":
             resampling=Resampling.nearest,
             compress="LZW",
             bigtiff="IF_SAFER",
-            scale_factor=0.01,
+            scale_factor=0.001,
         )
