@@ -37,7 +37,7 @@ Monthly LAI composites are generated state-by-state using the **biome-stratified
 3. Each pixel is assigned to one of 9 biome types using the year-matched [NLCD](https://www.usgs.gov/centers/eros/science/national-land-cover-database).
 4. A separate Random Forest model (100 trees, trained against MODIS LAI) is applied per sensor × biome combination.
 5. A QA band flags pixels with out-of-range inputs (bit 0), out-of-range LAI (bit 1), or non-vegetation biome (bit 2).
-6. Valid pixels are composited (median) across the month and exported as uint16 (scale factor = 0.01).
+6. Valid pixels are composited (median) across the month and exported as uint16 (scale factor = 0.001).
 
 Each GEE run processes one state × one year → 12 monthly GeoTIFFs.
 
@@ -64,7 +64,7 @@ pip install rasterio numpy tqdm
 
 If you use this dataset or code, please cite:
 
-> You, H., et al. (2025). A 30-m monthly leaf area index dataset for the contiguous United States from 2000 to 2022. *Scientific Data*. [DOI TBD]
+> You, H., et al. (2026). A 30-m monthly leaf area index dataset for the contiguous United States from 2000 to 2022. *Scientific Data*. [DOI TBD]
 
 The underlying LAI algorithm should also be cited:
 
