@@ -60,6 +60,10 @@ State-level tiles are warped to a common CONUS reference grid and merged into 12
 pip install rasterio numpy tqdm
 ```
 
+## Products
+- GEE Asset ID: projects/ee-hyou34/assets/CONUS_Monthly_LAI_30m
+- https://code.earthengine.google.com/?asset=projects/ee-hyou34/assets/CONUS_Monthly_LAI_30m
+
 ## Citation
 
 If you use this dataset or code, please cite:
