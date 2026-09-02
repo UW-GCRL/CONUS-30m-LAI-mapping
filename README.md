@@ -16,11 +16,11 @@ per-year count of valid months (**nvalid**).
 | Temporal resolution | Monthly (276 months) |
 | Projection | EPSG:5070 (NAD83 / Conus Albers) |
 | Storage / scale | **int16**, **scale factor 0.001** (real LAI = stored value × 0.001; valid LAI > 0) |
-| No-data | retrieved product: gaps are stored as **0**. Gap-filled product: pixels that remain unfilled are **−32768** |
+| No-data | retrieved product: gaps **and** non-vegetation are stored as **0** (valid LAI ≥ 0.1, so 0 is unambiguous). Gap-filled product: pixels that remain unfilled (non-vegetation, permanent water, no climatological basis) are **−32768** |
 | Format | tiled GeoTIFF, DEFLATE compression |
 
 Two LAI products are provided:
-- **Retrieved LAI** — the observed Random-Forest retrieval; cloud / SLC-off / no-observation pixels are gaps (0).
+- **Retrieved LAI** — the observed Random-Forest retrieval; cloud / SLC-off / no-observation pixels, and non-vegetated surfaces, are stored as 0.
 - **Gap-filled LAI** — the retrieved values preserved exactly, with gaps filled by a climatology-anchored
   temporal method (`gapfill/`), every filled pixel tagged in the QA layer.
 
