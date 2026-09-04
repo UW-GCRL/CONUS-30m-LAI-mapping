@@ -60,7 +60,7 @@ var assetLink = ui.Label('Open asset in Code Editor', {fontSize:'12px', color:'#
 assetLink.setUrl('https://code.earthengine.google.com/?asset=projects/ee-hyou34/assets/CONUS_Monthly_LAI_30m');
 var repoLink = ui.Label('Code & documentation on GitHub', {fontSize:'12px', color:'#1a73e8', margin:'2px 10px'});
 repoLink.setUrl('https://github.com/UW-GCRL/CONUS-30m-LAI-mapping');
-var cite = ui.Label('Cite: You, Kang & Chen (2026), Scientific Data. [DOI TBD]  |  Algorithm: Kang et al. (2021) RSE 258, 112383.',
+var cite = ui.Label('Data: You, Kang & Chen (2026), Zenodo, doi.org/10.5281/zenodo.22292385  |  Algorithm: Kang et al. (2021) RSE 258, 112383.',
                     {fontSize:'10px', color:'#888', margin:'6px 10px'});
 
 // ---- Legend builder (dynamic per layer) ----

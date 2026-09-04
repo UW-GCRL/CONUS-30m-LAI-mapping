@@ -112,7 +112,7 @@ outside the RF training window — and gap-filled pixels agree with MODIS as wel
 - **GEE asset (ImageCollection):** `projects/ee-hyou34/assets/CONUS_Monthly_LAI_30m` — 276 monthly gap-filled LAI images.
   - https://code.earthengine.google.com/?asset=projects/ee-hyou34/assets/CONUS_Monthly_LAI_30m
 - Companion **QA** and **nvalid** collections: `…/CONUS_Monthly_LAI_30m_QA`, `…/CONUS_Monthly_LAI_30m_nvalid`.
-- Archived dataset (DOI): *to be added on deposit.*
+- Archived dataset (DOI): https://doi.org/10.5281/zenodo.22292385 (Zenodo).
 
 ## Citation
 If you use this dataset or code, please cite:
