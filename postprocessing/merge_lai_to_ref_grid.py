@@ -1,8 +1,21 @@
 """
 merge_lai_to_ref_grid.py
 ========================
-Merge per-state monthly LAI GeoTIFFs (exported from GEE) into a single
-CONUS-wide monthly mosaic aligned to a reference grid.
+Reference utility for aligning per-state monthly LAI GeoTIFFs (exported from GEE)
+onto a common CONUS-wide reference grid.
+
+Encoding (for reference)
+------------------------
+Per-state GEE export tiles:  uint16, scale factor 0.01 (LAI x100), with a second
+    uint16 obs_count band; EPSG:5070, 30 m.
+Delivered CONUS product:     int16, scale factor 0.001 (LAI x1000), single band.
+    No-data is -32768 in the gap-filled product; in the retrieved mosaics,
+    unobserved and non-vegetated pixels are stored as 0.
+The integer re-encoding to the delivered int16 x1000 convention was applied during
+GEE export/production. This script documents the reference-grid alignment (warp +
+merge) step; by default it writes a continuous float32 mosaic and is provided as
+the grid-alignment reference rather than a byte-exact reproduction of the delivered
+encoding.
 
 Usage
 -----
@@ -13,12 +26,11 @@ Configure the paths in the ``__main__`` block at the bottom.
 Algorithm
 ---------
 1. Read the reference raster (CRS, transform, width, height).
-2. Pre-fill a float32 output raster with nodata (-9999 by default).
+2. Pre-fill the output raster with nodata.
 3. For each state tile:
    a. Warp to the reference grid via WarpedVRT (nearest resampling).
    b. Process block-by-block (default 512x512 pixels).
-   c. Apply scale factor 0.001 (converts int16 x100 to real LAI units).
-   d. Write valid pixels to the output (merge policy: last-one-wins).
+   c. Write valid pixels to the output (merge policy: last-one-wins).
 4. Build overview levels (2, 4, 8, 16, 32) for fast display.
 
 Dependencies
