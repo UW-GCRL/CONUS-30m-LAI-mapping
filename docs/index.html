@@ -203,9 +203,9 @@ footer a{color:var(--ink-soft)}
         crop fields, forest stands, riparian corridors, and urban canopies are resolved — detail that is lost
         in the 250 m–1 km products the community has relied on.</p>
       <p>LAI is retrieved from the full Landsat 5, 7, 8, and 9 Collection 2 surface-reflectance archive using
-        the biome-stratified Random Forest algorithm of Kang et al. (2021), which downscales the
-        well-validated MODIS LAI to Landsat resolution. Monthly composites are built by pixel-wise median and
-        mosaicked to a common 30 m grid.</p>
+        the biome-stratified Random Forest algorithm of Kang et al. (2021), which uses MODIS LAI as training
+        reference data to retrieve LAI from Landsat observations. Monthly composites are built by pixel-wise
+        median and mosaicked to a common 30 m grid.</p>
       <p>Because cloud, snow, and orbital gaps leave holes — mostly in winter — we also release a
         <b>gap-filled</b> companion product. A climatology-anchored temporal method fills the gaps while
         preserving every original observation, and a per-pixel QA layer flags exactly what was filled.</p>
