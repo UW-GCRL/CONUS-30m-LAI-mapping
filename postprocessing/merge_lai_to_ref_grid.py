@@ -1,21 +1,21 @@
 """
 merge_lai_to_ref_grid.py
 ========================
-Reference utility for aligning per-state monthly LAI GeoTIFFs (exported from GEE)
-onto a common CONUS-wide reference grid.
+Merge the per-state monthly LAI GeoTIFFs (exported from GEE) into a single
+CONUS-wide monthly mosaic aligned to a reference grid, in the delivered encoding.
 
-Encoding (for reference)
-------------------------
-Per-state GEE export tiles:  uint16, scale factor 0.01 (LAI x100), with a second
-    uint16 obs_count band; EPSG:5070, 30 m.
-Delivered CONUS product:     int16, scale factor 0.001 (LAI x1000), single band.
-    No-data is -32768 in the gap-filled product; in the retrieved mosaics,
-    unobserved and non-vegetated pixels are stored as 0.
-The integer re-encoding to the delivered int16 x1000 convention was applied during
-GEE export/production. This script documents the reference-grid alignment (warp +
-merge) step; by default it writes a continuous float32 mosaic and is provided as
-the grid-alignment reference rather than a byte-exact reproduction of the delivered
-encoding.
+Encoding
+--------
+Per-state export tiles (input):  band 1 = LAI as uint16, scale factor 0.01
+    (LAI x100); masked (cloud/shadow/water) and non-vegetated pixels are 0.
+    A second uint16 obs_count band may be present but is not required here.
+Delivered CONUS mosaic (output): int16, single band, scale factor 0.001
+    (LAI x1000). Unobserved and non-vegetated pixels are 0; valid LAI >= 0.1.
+The x100 -> x1000 re-encoding is a fixed integer multiply (SCALE_MULT = 10).
+
+These retrieved mosaics are the input to the gap-filling step
+(``gapfill/gapfill_lai.py``), which produces the gap-filled product (also int16,
+LAI x1000) with unfilled pixels set to -32768.
 
 Usage
 -----
@@ -26,11 +26,13 @@ Configure the paths in the ``__main__`` block at the bottom.
 Algorithm
 ---------
 1. Read the reference raster (CRS, transform, width, height).
-2. Pre-fill the output raster with nodata.
-3. For each state tile:
-   a. Warp to the reference grid via WarpedVRT (nearest resampling).
+2. Pre-fill the int16 output raster with 0.
+3. For each per-state tile:
+   a. Warp band 1 (LAI x100) to the reference grid via WarpedVRT (nearest).
    b. Process block-by-block (default 512x512 pixels).
-   c. Write valid pixels to the output (merge policy: last-one-wins).
+   c. Re-encode: value = round(LAI_x100 * 10) as int16 where valid (LAI_x100 > 0),
+      else 0.
+   d. Write valid pixels to the output (merge policy: last-one-wins).
 4. Build overview levels (2, 4, 8, 16, 32) for fast display.
 
 Dependencies
@@ -52,31 +54,32 @@ from rasterio.windows import Window
 from rasterio.vrt import WarpedVRT
 from tqdm import tqdm
 
+NODATA = -32768          # declared no-data of the delivered files (retrieved gaps are stored as 0)
+SCALE_MULT = 10          # per-state LAI x100  ->  delivered LAI x1000
 
-def merge_continuous_to_ref_grid(
+
+def merge_lai_to_ref_grid(
     in_dir,
     ref_tif,
     out_tif,
     recursive=True,
     blocksize=512,
     prefer="src",
-    dst_nodata=None,
-    src_valid_fn=None,
     resampling=Resampling.nearest,
     compress="LZW",
     bigtiff="IF_SAFER",
-    scale_factor=0.001,
+    scale_mult=SCALE_MULT,
 ):
     """
-    Merge continuous rasters (e.g., LAI) onto the exact grid of ref_tif.
+    Merge per-state LAI tiles onto the exact grid of ref_tif and write the delivered
+    int16 (LAI x1000) CONUS mosaic; unobserved and non-vegetated pixels are 0.
 
     Parameters
     ----------
     in_dir : str or Path
-        Directory containing state-level GeoTIFF files.
+        Directory of per-state GeoTIFF tiles (band 1 = LAI x100, uint16).
     ref_tif : str or Path
-        Reference raster that defines the output grid
-        (CRS, transform, width, height).
+        Reference raster defining the output grid (CRS, transform, size).
     out_tif : str or Path
         Path for the output CONUS mosaic GeoTIFF.
     recursive : bool
@@ -84,22 +87,17 @@ def merge_continuous_to_ref_grid(
     blocksize : int
         Tile size (pixels) for block-by-block processing.
     prefer : str
-        Merge policy: ``'src'`` = last-one-wins (overwrites);
-        ``'dest'`` = first-one-wins (fills gaps only).
-    dst_nodata : float or None
-        Output nodata value. Defaults to ref raster nodata or -9999.
-    src_valid_fn : callable or None
-        Function(array, nodata) -> bool mask defining valid pixels.
-        Defaults to: finite and != nodata.
+        Merge policy: 'src' = last-one-wins (overwrites); 'dest' = first-one-wins
+        (fills only where the output is still 0).
     resampling : rasterio.enums.Resampling
-        Resampling method for warping (default: nearest).
+        Resampling for warping (default: nearest, to preserve 30 m values).
     compress : str
         GDAL compression codec (default: 'LZW').
     bigtiff : str
         BigTIFF mode (default: 'IF_SAFER').
-    scale_factor : float
-        Multiply valid source pixels by this value before writing.
-        Use 0.001 to convert LAI stored as int16 x100 to real units.
+    scale_mult : int
+        Integer multiplier from the per-state LAI x100 band to the delivered
+        LAI x1000 encoding (default 10).
     """
     in_dir = Path(in_dir)
     tifs = sorted(in_dir.rglob("*.tif") if recursive else in_dir.glob("*.tif"))
@@ -107,26 +105,20 @@ def merge_continuous_to_ref_grid(
     if not tifs:
         raise SystemExit(f"No .tif/.tiff files found in: {in_dir}")
 
-    # Read reference grid metadata
     with rasterio.open(ref_tif) as ref:
         dst_crs       = ref.crs
         dst_transform = ref.transform
         width, height = ref.width, ref.height
-        ref_nodata    = ref.nodata
-        out_dtype     = "float32"
-
-    if dst_nodata is None:
-        dst_nodata = ref_nodata if ref_nodata is not None else -9999.0
 
     profile = {
         "driver":    "GTiff",
         "width":     width,
         "height":    height,
         "count":     1,
-        "dtype":     out_dtype,
+        "dtype":     "int16",
         "crs":       dst_crs,
         "transform": dst_transform,
-        "nodata":    dst_nodata,
+        "nodata":    NODATA,
         "tiled":     True,
         "blockxsize": blocksize,
         "blockysize": blocksize,
@@ -135,29 +127,23 @@ def merge_continuous_to_ref_grid(
         "predictor": 2,
     }
 
-    if src_valid_fn is None:
-        def src_valid_fn(arr, nodata_val):
-            if nodata_val is None:
-                return np.isfinite(arr)
-            return np.isfinite(arr) & (arr != nodata_val)
-
     out_tif = Path(out_tif)
     out_tif.parent.mkdir(parents=True, exist_ok=True)
 
-    # Step 1: Create output raster pre-filled with nodata
+    # Step 1: create output raster pre-filled with 0 (unobserved / non-vegetation)
     with rasterio.open(out_tif, "w", **profile) as dst_w:
-        blank = np.full((1, blocksize, blocksize), dst_nodata, dtype=out_dtype)
+        blank = np.zeros((1, blocksize, blocksize), dtype="int16")
         for row in range(0, height, blocksize):
             h = min(blocksize, height - row)
             for col in range(0, width, blocksize):
                 w = min(blocksize, width - col)
                 dst_w.write(blank[:, :h, :w], window=Window(col, row, w, h))
 
-    # Step 2: Warp and merge each state tile
+    # Step 2: warp and merge each state tile
     with rasterio.open(out_tif, "r+") as dst:
         for tif in tqdm(tifs, desc="Merging LAI tiles"):
             with rasterio.open(str(tif)) as src:
-                src_nodata = src.nodata
+                # warp band 1 (LAI x100) to float32 so the x10 scaling is exact
                 with WarpedVRT(
                     src,
                     crs=dst_crs,
@@ -165,9 +151,9 @@ def merge_continuous_to_ref_grid(
                     width=width,
                     height=height,
                     resampling=resampling,
-                    src_nodata=src_nodata,
-                    nodata=dst_nodata,
-                    dtype=out_dtype,
+                    src_nodata=src.nodata,
+                    nodata=np.nan,
+                    dtype="float32",
                 ) as vrt:
                     for row in range(0, height, blocksize):
                         h = min(blocksize, height - row)
@@ -175,33 +161,24 @@ def merge_continuous_to_ref_grid(
                             w = min(blocksize, width - col)
                             win = Window(col, row, w, h)
 
+                            lai = vrt.read(1, window=win)          # LAI x100 (float32)
+                            valid = np.isfinite(lai) & (lai > 0)
+                            src_i16 = np.where(
+                                valid, np.rint(lai * scale_mult), 0
+                            ).astype(np.int16)                     # gaps -> 0
+
                             dest_block = dst.read(1, window=win)
-                            src_block  = vrt.read(1, window=win)
-
-                            dest_valid = src_valid_fn(dest_block, dst_nodata)
-                            src_valid  = src_valid_fn(src_block,  dst_nodata)
-
-                            # Scale valid pixels from int16 x1000 to real LAI
-                            if scale_factor is not None and scale_factor != 1.0:
-                                src_block_scaled = src_block.astype("float32", copy=False)
-                                src_block_scaled[src_valid] = (
-                                    src_block_scaled[src_valid] * scale_factor
-                                )
-                            else:
-                                src_block_scaled = src_block
-
                             out_block = dest_block.copy()
                             if prefer == "src":
-                                out_block[src_valid] = src_block_scaled[src_valid]
+                                out_block[valid] = src_i16[valid]
                             elif prefer == "dest":
-                                fill = (~dest_valid) & src_valid
-                                out_block[fill] = src_block_scaled[fill]
+                                fill = (dest_block == 0) & valid
+                                out_block[fill] = src_i16[fill]
                             else:
                                 raise ValueError("prefer must be 'src' or 'dest'")
 
                             dst.write(out_block[np.newaxis, :, :], window=win)
 
-        # Build overviews for fast display
         try:
             dst.build_overviews([2, 4, 8, 16, 32], Resampling.average)
             dst.update_tags(ns="rio_overview", resampling="average")
@@ -233,17 +210,12 @@ if __name__ == "__main__":
             continue
 
         print(f"==> Processing {m} ...")
-        merge_continuous_to_ref_grid(
+        merge_lai_to_ref_grid(
             in_dir=in_dir,
             ref_tif=ref_tif,
             out_tif=out_tif,
             recursive=True,
             blocksize=512,
             prefer="src",
-            dst_nodata=None,
-            src_valid_fn=None,
             resampling=Resampling.nearest,
-            compress="LZW",
-            bigtiff="IF_SAFER",
-            scale_factor=0.001,
         )

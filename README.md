@@ -73,7 +73,7 @@ Monthly LAI is retrieved state-by-state with the **biome-stratified Random Fores
 2. Spectral indices (NDVI, NDWI) and solar geometry are computed.
 3. Each pixel is assigned to one of 9 biome types using **year-matched NLCD** (2001/2004/2006/2008/2011/2013/2016/2019/2021 epochs).
 4. A Random Forest (100 trees, trained on 2006–2018 MODIS LAI) is applied per sensor × biome.
-5. Valid pixels are composited by **monthly median** and exported as **int16 (LAI × 1000)**.
+5. Valid pixels are composited by **monthly median** and exported per state as **uint16 (LAI × 100)** with a companion obs_count band. The CONUS mosaics are re-encoded to **int16 (LAI × 1000)** during merging (`postprocessing/`).
 
 Each run processes one state × one year → 12 monthly GeoTIFFs.
 
