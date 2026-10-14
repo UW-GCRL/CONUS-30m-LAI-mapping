@@ -156,8 +156,8 @@ footer a{color:var(--ink-soft)}
   <div class="wrap">
     <p class="eyebrow">Contiguous United States · 2000–2022</p>
     <h1>A 30&nbsp;m monthly leaf&nbsp;area&nbsp;index<br><span class="thin">for all of CONUS.</span></h1>
-    <p class="lede">Twenty-three years of monthly Leaf Area Index at Landsat resolution — wall-to-wall across the
-      contiguous United States, gap-filled, and openly available.</p>
+    <p class="lede">Twenty-three years of monthly Leaf Area Index at Landsat resolution across the contiguous United
+      States, with a gap-filled version, openly available.</p>
     <p class="byline">Hangkai You<sup>1</sup>, Yanghui Kang<sup>2</sup>, Min Chen<sup>1</sup>
       &nbsp;·&nbsp; <b>1</b>&nbsp;University of Wisconsin–Madison &nbsp; <b>2</b>&nbsp;Virginia Tech</p>
     <div class="cta">
@@ -170,7 +170,7 @@ footer a{color:var(--ink-soft)}
       <div class="fact"><div class="n">276</div><div class="l">monthly images<br>Jan 2000 – Dec 2022</div></div>
       <div class="fact"><div class="n">0.78</div><div class="l">R² vs field PAI<br>(this product)</div></div>
       <div class="fact"><div class="n">0.77</div><div class="l">R² vs MODIS<br>(consistency)</div></div>
-      <div class="fact"><div class="n">~1.9 TB</div><div class="l">open, gap-filled<br>+ QA &amp; nvalid</div></div>
+      <div class="fact"><div class="n">4</div><div class="l">public Earth Engine collections<br>LAI, QA, nvalid, obscount</div></div>
     </div>
   </div>
 </section>
@@ -197,16 +197,16 @@ footer a{color:var(--ink-soft)}
   <div class="wrap split">
     <div class="prose">
       <p class="eyebrow">What it is</p>
-      <h2 style="font-size:clamp(26px,3.4vw,36px); margin-bottom:18px">The first multi-decadal 30&nbsp;m LAI record for a continental domain</h2>
+      <h2 style="font-size:clamp(26px,3.4vw,36px); margin-bottom:18px">A multi-decadal 30&nbsp;m LAI record for the contiguous United States</h2>
       <p>CONUS-30m-LAI provides monthly Leaf Area Index at 30-meter resolution across the entire contiguous
         United States, every month from January 2000 through December 2022. At this resolution, individual
-        crop fields, forest stands, riparian corridors, and urban canopies are resolved — detail that is lost
-        in the 250 m–1 km products the community has relied on.</p>
-      <p>LAI is retrieved from the full Landsat 5, 7, 8, and 9 Collection 2 surface-reflectance archive using
+        crop fields, forest stands, and riparian corridors are resolved, detail that is lost in 250 m to
+        1 km products.</p>
+      <p>LAI is retrieved from Landsat 5, 7, 8, and 9 Collection 2 surface reflectance using
         the biome-stratified Random Forest algorithm of Kang et al. (2021), which uses MODIS LAI as training
         reference data to retrieve LAI from Landsat observations. Monthly composites are built by pixel-wise
         median and mosaicked to a common 30 m grid.</p>
-      <p>Because cloud, snow, and orbital gaps leave holes — mostly in winter — we also release a
+      <p>Because clouds and sparse acquisitions leave gaps, mostly in winter, we also release a
         <b>gap-filled</b> companion product. A climatology-anchored temporal method fills the gaps while
         preserving every original observation, and a per-pixel QA layer flags exactly what was filled.</p>
     </div>
@@ -246,7 +246,7 @@ footer a{color:var(--ink-soft)}
         <img src="figures/climatology.png" alt="Monthly mean LAI maps for January, April, July, and October across CONUS">
         <figcaption><b>Monthly LAI climatology (gap-filled), 2000–2022.</b> Mean LAI for January, April, July,
           and October, showing winter dormancy, spring green-up, the summer maximum in the eastern forests and
-          irrigated Midwest, and autumn senescence.</figcaption>
+          the Midwest, and autumn senescence.</figcaption>
       </figure>
       <figure class="figure">
         <img src="figures/timeseries.png" alt="CONUS mean LAI time series for the retrieved and gap-filled products">
@@ -258,7 +258,7 @@ footer a{color:var(--ink-soft)}
         <img src="figures/field_validation.png" alt="Retrieved LAI against GBOV field plant area index at 27 NEON sites, overall and by vegetation type">
         <figcaption><b>Field validation of the released product.</b> Retrieved LAI against GBOV field plant area
           index (6,195 plot-dates, 27 NEON sites, 2013–2022): R² = 0.78, RMSE = 1.06 m² m⁻². LAI levels off near
-          5–6 m² m⁻² in dense forests, where field PAI (which includes wood) reaches about 9.</figcaption>
+          5–6 m² m⁻² in dense forests, where field PAI (which includes wood) reaches up to 10.7 m² m⁻².</figcaption>
       </figure>
     </div>
   </div>
@@ -280,8 +280,8 @@ footer a{color:var(--ink-soft)}
     </div>
     <div class="callout">
       Agreement with MODIS is similar across the 2000–2005, 2006–2018, and 2019–2022 periods. Field errors are
-      largest in open-canopy evergreen forests, and LAI saturates near 5–6 m² m⁻² in dense canopies. The gap-filled product is spatially and temporally complete but damps
-      interannual extremes, so anomaly studies should use retrieved values (QA = 0) together with the nvalid layer.
+      largest in evergreen needleleaf forests, and LAI levels off near 5–6 m² m⁻² in dense canopies. The gap-filled product fills
+      gaps in pixel-years with at least one retrieval but damps interannual extremes, so anomaly studies should use retrieved values (QA = 0) together with the nvalid layer.
     </div>
   </div>
 </section>
@@ -292,7 +292,7 @@ footer a{color:var(--ink-soft)}
       <p class="eyebrow">Get the data</p>
       <h2>Access &amp; download</h2>
       <p>The product lives as a public Earth Engine ImageCollection, with the full generation pipeline on
-        GitHub and an archived copy under a registered DOI.</p>
+        GitHub and a citable record under a registered DOI.</p>
     </div>
     <div class="access-grid">
       <a class="tile" href="https://ee-hyou34.projects.earthengine.app/view/conuslaiviewer">
@@ -302,7 +302,7 @@ footer a{color:var(--ink-soft)}
       <a class="tile" href="https://github.com/UW-GCRL/CONUS-30m-LAI-mapping">
         <h3>Code &amp; docs on GitHub ↗</h3><p>Retrieval, mosaicking, gap-filling, and validation pipeline.</p></a>
       <a class="tile" href="https://doi.org/10.5281/zenodo.22292385">
-        <h3>Archived dataset (DOI) ↗</h3><p><span class="mono">10.5281/zenodo.22292385</span> · Zenodo</p></a>
+        <h3>Dataset record (DOI) ↗</h3><p><span class="mono">10.5281/zenodo.22292385</span> · Zenodo</p></a>
     </div>
     <pre>// Earth Engine — one monthly image (int16, LAI = value * 0.001; -32768 = no value)
 var lai = ee.ImageCollection('projects/ee-hyou34/assets/CONUS_Monthly_LAI_30m')
@@ -325,7 +325,7 @@ Export.image.toDrive({
     <div class="sec-head">
       <p class="eyebrow">Citation</p>
       <h2>If you use this dataset</h2>
-      <p>Please cite the data descriptor and the underlying retrieval algorithm.</p>
+      <p>Please cite the dataset record and the underlying retrieval algorithm.</p>
     </div>
     <div class="cite">
       <div class="who">Dataset</div>

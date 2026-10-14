@@ -10,7 +10,7 @@ Stages:
   python gapfill_lai.py --climatology   # build robust climatology (rclim/cnt/csrc per month)
   python gapfill_lai.py --fill          # fill all years -> *_gf.tif, *_qa.tif, YYYY_nvalid.tif
   python gapfill_lai.py --fill --year 2005
-  python gapfill_lai.py --fill --tile-test COL ROW     # one 2048 tile, all years (prototype)
+  python gapfill_lai.py --fill --tile-test COL ROW     # one tile, all years (prototype)
 
 Resumable (skips existing outputs). Run --climatology before --fill.
 """

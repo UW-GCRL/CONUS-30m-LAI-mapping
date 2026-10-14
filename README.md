@@ -21,7 +21,8 @@ per-year count of valid months (**nvalid**).
 
 Two LAI products:
 - **Retrieved LAI**: the Random Forest retrieval, monthly median of valid retrievals. Pixel-months without
-  a valid retrieval (cloud, SLC-off, no observation) and non-vegetated pixels have no value. It equals
+  a valid retrieval (no clear observation, or retrievals rejected by the quality checks) and
+  non-vegetated pixels have no value. It equals
   the gap-filled LAI where QA = 0, so it is obtained from the published collections as
   `LAI.updateMask(QA.eq(0))` (−32768 elsewhere when exported as shown below).
 - **Gap-filled LAI**: the retrieved values preserved exactly, with gaps filled by a climatology-anchored
@@ -73,8 +74,8 @@ Export.image.toDrive({image: QA.unmask(255), description: 'QA_2010_Jul', region:
 CONUS-30m-LAI-mapping/
 ├── gee/                                  # Google Earth Engine (retrieval, re-export, validation refs)
 │   ├── lai_state_monthly_export.js       # main LAI retrieval, exported per state × year
-│   ├── lai_state_JUNE2022_export.js      # re-export of June 2022 (fixes one corrupt month)
-│   ├── obs_count_export.js               # observation-density statistics and maps (clear Landsat observations)
+│   ├── lai_state_JUNE2022_export.js      # re-export of June 2022 (missing from the first export)
+│   ├── obs_count_export.js               # observation-density statistics and 12 multi-year mean maps (500 m)
 │   ├── obs_count_analysis.js             # observation-density analysis
 │   ├── export_MODIS_VIIRS_median.js      # monthly-median MODIS/VIIRS LAI at 500 m (validation reference)
 │   ├── export_PFT_yearly.js              # year-matched NLCD biome maps at 500 m (validation strata)
@@ -157,15 +158,17 @@ R² is the squared Pearson correlation; RMSE and bias are in m² m⁻² (bias = 
   not independent accuracy. Agreement is similar for 2000–2005, 2006–2018, and 2019–2022
   (retrieved R² 0.78, 0.77, 0.76).
 - Gap filling (`gapfill_holdout.py`, `qa_frequency.py`): withheld retrievals reconstructed by the
-  production routine give an approximate RMSE of 0.69 m² m⁻² across filled values, weighted by the
-  frequency of each QA code, with negligible bias.
-- Known limitations: LAI saturates near 5–6 m² m⁻² in dense canopies (field PAI reaches about 9),
-  the largest errors are in open-canopy evergreen forests, and climatology-based filling damps
-  interannual anomalies (use QA 0 values for trend, disturbance, and extreme-event analyses).
+  production routine give an approximate RMSE of 0.69 m² m⁻² across filled values (QA codes weighted
+  by their frequency, short-gap result for QA 1), with negligible bias.
+- Known limitations: retrieved LAI levels off near 5–6 m² m⁻² in dense canopies and cannot exceed
+  6.9 m² m⁻², the largest MODIS LAI in the training samples; field errors are largest in evergreen
+  needleleaf forests (RMSE 1.48 m² m⁻²); and climatology-based filling damps interannual anomalies
+  (use QA 0 values for trend, disturbance, and extreme-event analyses).
 
 ## Requirements
 - **GEE scripts:** a Google Earth Engine account.
-- **Python:** `pip install rasterio numpy pandas` (gap-fill / validation); `geedim` for `download/`.
+- **Python:** `pip install rasterio numpy pandas pyproj requests matplotlib tqdm` (mosaicking, gap-fill,
+  validation); `earthengine-api` for `gee/set_asset_metadata.py`; `earthengine-api` and `geedim` for `download/`.
 - Input/output paths are defined at the top of each Python script — adjust to your environment before running.
 
 ## Products
@@ -175,8 +178,8 @@ R² is the squared Pearson correlation; RMSE and bias are in m² m⁻² (bias = 
 - **Retrieved LAI:** the gap-filled LAI where QA = 0 (−32768 elsewhere when exported); see "Two LAI
   products" and "Exporting to GeoTIFF" above.
 - **Observation count:** `…/CONUS_Monthly_LAI_30m_obscount`, 276 monthly images of the number of
-  cloud-free Landsat observations, on a ~500 m grid (float, EPSG:5070).
-- Archived dataset (DOI): https://doi.org/10.5281/zenodo.22292385 (Zenodo).
+  cloud-free Landsat observations, on a 500 m grid (float, EPSG:5070).
+- Dataset record (DOI): https://doi.org/10.5281/zenodo.22292385 (Zenodo; metadata and access information).
 
 ## Citation
 If you use this dataset or code, please cite the data record:
