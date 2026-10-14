@@ -151,8 +151,8 @@ R² is the squared Pearson correlation; RMSE and bias are in m² m⁻² (bias = 
 ## Citation
 If you use this dataset or code, please cite the data record:
 
-> You, H., Kang, Y., & Chen, M. (2026). CONUS-30m-LAI: A monthly 30-m leaf area index dataset for the
-> contiguous United States, 2000–2022 [Data set]. Zenodo. https://doi.org/10.5281/zenodo.22292385
+> You, H., Kang, Y., & Chen, M. (2026). Monthly 30-m Leaf Area Index Dataset for the Contiguous United
+> States from 2000 to 2022. Zenodo. https://doi.org/10.5281/zenodo.22292385
 
 Data descriptor (in review): You, H., Kang, Y., & Chen, M. Monthly 30-m Leaf Area Index Dataset for the
 Contiguous United States from 2000 to 2022. *Scientific Data*.

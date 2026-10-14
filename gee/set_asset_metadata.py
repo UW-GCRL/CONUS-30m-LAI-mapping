@@ -20,9 +20,9 @@ COMMON = {
     "contact": "hyou34@wisc.edu; min.chen@wisc.edu",
     "doi": DOI,
     "doi_url": "https://doi.org/" + DOI,
-    "citation": ("You, H., Kang, Y. & Chen, M. (2026). CONUS-30m-LAI: A monthly 30-m leaf area index "
-                 "dataset for the contiguous United States, 2000-2022 [Data set]. Zenodo. "
-                 "https://doi.org/" + DOI),
+    # must match the Zenodo record exactly (title, creators; Zenodo record type is "Data paper")
+    "citation": ("You, H., Kang, Y. & Chen, M. (2026). Monthly 30-m Leaf Area Index Dataset for the "
+                 "Contiguous United States from 2000 to 2022. Zenodo. https://doi.org/" + DOI),
 }
 QA_CODES = ("0 retrieved value (not filled); 1 linear interpolation between two valid months of the "
             "same year; 2 climatology fill, pixel-year with >=3 valid months; 3 climatology fill, "
