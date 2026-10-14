@@ -16,25 +16,28 @@ per-year count of valid months (**nvalid**).
 | Temporal resolution | Monthly (276 months) |
 | Projection | EPSG:5070 (NAD83 / Conus Albers) |
 | Storage / scale | **int16**, **scale factor 0.001** (real LAI = stored value × 0.001; valid LAI > 0) |
-| No-data | retrieved product: gaps **and** non-vegetation are stored as **0** (valid LAI ≥ 0.1, so 0 is unambiguous). Gap-filled product: pixels that remain unfilled (non-vegetation, permanent water, no climatological basis) are **−32768** |
-| Format | tiled GeoTIFF, DEFLATE compression |
+| No-data | retrieved product: gaps **and** non-vegetated pixels are stored as **0** (valid LAI ≥ 0.1, so 0 is unambiguous). Gap-filled product: pixel-years without any valid month (including non-vegetated pixels and water) remain unfilled and are **−32768** |
+| Format | Earth Engine ImageCollections (export to GeoTIFF from Earth Engine) |
 
-Two LAI products are provided:
-- **Retrieved LAI** — the observed Random-Forest retrieval; cloud / SLC-off / no-observation pixels, and non-vegetated surfaces, are stored as 0.
-- **Gap-filled LAI** — the retrieved values preserved exactly, with gaps filled by a climatology-anchored
-  temporal method (`gapfill/`), every filled pixel tagged in the QA layer.
+Two LAI products:
+- **Retrieved LAI**: the Random Forest retrieval, monthly median of valid retrievals. Pixel-months without
+  a valid retrieval (cloud, SLC-off, no observation) and non-vegetated pixels are 0. It equals the
+  gap-filled LAI where QA = 0, so it can be reconstructed from the published collections:
+  `LAI.updateMask(QA.eq(0)).unmask(0)`.
+- **Gap-filled LAI**: the retrieved values preserved exactly, with gaps filled by a climatology-anchored
+  temporal method (`gapfill/`); every value is labelled in the QA layer.
 
 ### QA codes (gap-filled product)
 | Code | Meaning |
 |---|---|
-| 0 | original observation (unchanged) |
-| 1 | within-year linear interpolation |
-| 2 | climatology fill (≥ 3 observed years) |
-| 3 | climatology fill (1–2 observed years) |
-| 4 | spatial-fallback climatology |
-| 255 | not filled — no climatological basis (e.g. permanent water/ocean) |
+| 0 | retrieved value (not filled) |
+| 1 | linear interpolation between two valid months of the same year |
+| 2 | climatology fill; the pixel-year has at least three valid months |
+| 3 | climatology fill; the pixel-year has one or two valid months |
+| 4 | climatology fill using the spatial-fallback (block) climatology, because fewer than three years were valid for that calendar month |
+| 255 | not filled: no valid month in the pixel-year (includes non-vegetated pixels and water) |
 
-**nvalid** gives, per pixel per year, the number of months with a valid *observed* LAI (0–12).
+**nvalid** gives, per pixel per year, the number of months with a valid retrieval (0–12).
 
 ## Repository Structure
 
@@ -43,19 +46,28 @@ CONUS-30m-LAI-mapping/
 ├── gee/                                  # Google Earth Engine (retrieval, re-export, validation refs)
 │   ├── lai_state_monthly_export.js       # main LAI retrieval, exported per state × year
 │   ├── lai_state_JUNE2022_export.js      # re-export of June 2022 (fixes one corrupt month)
-│   ├── obs_count_export.js               # per-pixel observation-count export
-│   ├── obs_count_analysis.js             # observation-count analysis
+│   ├── obs_count_export.js               # observation-density statistics and maps (clear Landsat observations)
+│   ├── obs_count_analysis.js             # observation-density analysis
 │   ├── export_MODIS_VIIRS_median.js      # monthly-median MODIS/VIIRS LAI at 500 m (validation reference)
-│   └── export_PFT_yearly.js              # year-matched NLCD biome maps at 500 m (validation strata)
+│   ├── export_PFT_yearly.js              # year-matched NLCD biome maps at 500 m (validation strata)
+│   ├── conus_lai_viewer.js               # source of the public Earth Engine viewer app
+│   └── set_asset_metadata.py             # descriptions / QA codes / DOI on the GEE collections
 ├── postprocessing/                       # mosaic state tiles onto the CONUS grid
 │   ├── merge_lai_to_ref_grid.py          # warp + merge state tiles → CONUS monthly mosaics
 │   └── build_june2022_conus.py           # reconcile + mosaic the re-exported June 2022
 ├── gapfill/                              # gap-filling pipeline
 │   ├── GAPFILL_PLAN.md                   # method description
 │   └── gapfill_lai.py                    # climatology-anchored temporal gap-fill + QA + nvalid
-├── validation/                          # independent cross-comparison with MODIS
+├── validation/                           # field, 20 m map, withholding, and MODIS checks
+│   ├── gbov_download.py                  # download GBOV reference data (NEON sites)
+│   ├── gbov_validate.py                  # product vs GBOV RM-7 field PAI (plot-level)
+│   ├── gbov_lp3_validate.py              # product vs GBOV LP-3 Sentinel-2 20 m maps
+│   ├── gapfill_holdout.py                # withholding test of the gap filling, by QA code
+│   ├── qa_frequency.py                   # frequency of QA codes in the released product
+│   ├── agg_validate.py                   # scale-matched 30 m → 500 m comparison with MODIS (R1)
+│   ├── agg_validate_r2.py                # same, plus common cell set and valid-area sensitivity
+│   ├── figures_validation.py             # validation figures
 │   ├── validate_local.py                 # PFT × QA-stratified sampling (retrieved / filled / overall)
-│   ├── agg_validate.py                   # scale-matched 30 m → 500 m aggregation vs MODIS
 │   ├── period_breakdown.py               # accuracy by period (2000–05 / 06–18 / 19–22)
 │   └── period_pft_breakdown.py           # accuracy by period × biome
 ├── download/
@@ -83,25 +95,44 @@ State tiles are warped (nearest-neighbor) onto the common EPSG:5070 CONUS refere
 via `build_june2022_conus.py`.
 
 ### 3 — Gap-filling (Python) — `gapfill/gapfill_lai.py`
-Gaps are filled with a **climatology-anchored temporal** method (Kandasamy et al., 2013): a robust
-per-pixel, per-month climatology is built across years; within-year interior gaps are linearly
-interpolated; remaining gaps are filled from the amplitude-scaled climatology, with a coarse spatial
-fallback where a pixel's own climatology is undefined. **Original observations are preserved exactly**
-(`valid = LAI > 0`), and every filled pixel is flagged in the QA layer. Pixels with no climatological
-basis (permanent water/ocean) are left unfilled (QA 255). See `gapfill/GAPFILL_PLAN.md`.
+Gaps are filled with a **climatology-anchored temporal** method (Kandasamy et al., 2013), with
+values > 0 treated as valid:
+- **Climatology:** for each pixel and calendar month, the mean of the valid values across the 23
+  years. Where fewer than three years are valid, the pixel climatology is replaced by a coarse
+  spatial climatology: the mean climatology of the 160 × 160-pixel block (~4.8 km) containing the
+  pixel, with empty blocks filled by interpolation from surrounding blocks. No land-cover
+  constraint is applied.
+- **Filling, within each pixel-year with at least one valid month:** gaps between two valid months
+  are linearly interpolated (QA 1); the remaining gaps (before the first or after the last valid
+  month) are filled with the climatology times an amplitude factor, the ratio of the sum of valid
+  values to the sum of the corresponding climatology values in that year, clamped to 0.3–3.0
+  (QA 2, 3, or 4; see table). If no climatology were available after the fallback, the nearest valid
+  month of the same year would be copied; this did not occur in the released product.
+- **Retrieved values are preserved exactly**, and every value is labelled in the QA layer.
+  Pixel-years without any valid month (including non-vegetated pixels and water) are not filled
+  (QA 255).
+
+See `gapfill/GAPFILL_PLAN.md`.
 
 ### 4 — Validation (Python) — `validation/`
-Retrieved and gap-filled LAI are cross-compared against **monthly-median MODIS (MOD15A2H)** at 500 m,
-stratified by biome and period. The scale-matched comparison (`agg_validate.py`; 30 m aggregated to the
-500 m MODIS grid) gives, over all biomes and years:
+R² is the squared Pearson correlation; RMSE and bias are in m² m⁻² (bias = product minus reference).
 
-| | R² | RMSE (LAI) |
-|---|---|---|
-| Retrieved vs MODIS | 0.77 | 0.83 |
-| Gap-filled vs MODIS | 0.76 | 0.83 |
+| Check | Reference | N | R² | RMSE | Bias |
+|---|---|---|---|---|---|
+| Field validation (`gbov_validate.py`) | GBOV RM-7 field PAI, 27 NEON sites, 2013–2022 | 6,195 plot-dates | 0.78 | 1.06 | +0.29 |
+| Spatial detail (`gbov_lp3_validate.py`) | GBOV LP-3 Sentinel-2 20 m maps | 888,940 pixels (1,781 maps) | 0.79 | 1.10 | −0.06 |
+| Consistency with MODIS (`agg_validate_r2.py`), retrieved | MOD15A2H monthly median, 500 m | 3,482,166 cell-months | 0.77 | 0.83 | +0.38 |
+| Same cells, gap-filled | MOD15A2H monthly median, 500 m | 3,482,166 cell-months | 0.77 | 0.83 | +0.38 |
 
-Agreement is **stable across 2000–2005, 2006–2018, and 2019–2022** (R² ≈ 0.76–0.77) — no degradation
-outside the RF training window — and gap-filled pixels agree with MODIS as well as the observations.
+- MODIS also supplied the training targets (MCD15A3H), so the MODIS comparison measures consistency,
+  not independent accuracy. Agreement is similar for 2000–2005, 2006–2018, and 2019–2022
+  (retrieved R² 0.78, 0.77, 0.76).
+- Gap filling (`gapfill_holdout.py`, `qa_frequency.py`): withheld retrievals reconstructed by the
+  production routine give an approximate RMSE of 0.69 m² m⁻² across filled values, weighted by the
+  frequency of each QA code, with negligible bias.
+- Known limitations: LAI saturates near 5–6 m² m⁻² in dense canopies (field PAI reaches about 9),
+  the largest errors are in open-canopy evergreen forests, and climatology-based filling damps
+  interannual anomalies (use QA 0 values for trend, disturbance, and extreme-event analyses).
 
 ## Requirements
 - **GEE scripts:** a Google Earth Engine account.
@@ -112,12 +143,19 @@ outside the RF training window — and gap-filled pixels agree with MODIS as wel
 - **GEE asset (ImageCollection):** `projects/ee-hyou34/assets/CONUS_Monthly_LAI_30m` — 276 monthly gap-filled LAI images.
   - https://code.earthengine.google.com/?asset=projects/ee-hyou34/assets/CONUS_Monthly_LAI_30m
 - Companion **QA** and **nvalid** collections: `…/CONUS_Monthly_LAI_30m_QA`, `…/CONUS_Monthly_LAI_30m_nvalid`.
+- **Retrieved LAI:** the gap-filled LAI where QA = 0 (0 elsewhere); see "Two LAI products" above.
+- **Observation count:** `…/CONUS_Monthly_LAI_30m_obscount`, 276 monthly images of the number of
+  cloud-free Landsat observations, on a ~500 m grid (float, EPSG:5070).
 - Archived dataset (DOI): https://doi.org/10.5281/zenodo.22292385 (Zenodo).
 
 ## Citation
-If you use this dataset or code, please cite:
+If you use this dataset or code, please cite the data record:
 
-> You, H., et al. (2026). A 30-m monthly leaf area index dataset for the contiguous United States from 2000 to 2022. *Scientific Data*. [DOI TBD]
+> You, H., Kang, Y., & Chen, M. (2026). CONUS-30m-LAI: A monthly 30-m leaf area index dataset for the
+> contiguous United States, 2000–2022 [Data set]. Zenodo. https://doi.org/10.5281/zenodo.22292385
+
+Data descriptor (in review): You, H., Kang, Y., & Chen, M. Monthly 30-m Leaf Area Index Dataset for the
+Contiguous United States from 2000 to 2022. *Scientific Data*.
 
 Underlying LAI algorithm:
 
@@ -128,7 +166,8 @@ Underlying LAI algorithm:
 Gap-filling method:
 
 > Kandasamy, S., Baret, F., Verger, A., Neveux, P., & Weiss, M. (2013). A comparison of methods for smoothing
-> and gap filling time series of remote sensing observations. *Biogeosciences*, 10, 4055–4071.
+> and gap filling time series of remote sensing observations – application to MODIS LAI products.
+> *Biogeosciences*, 10, 4055–4071.
 
 ## License
 Code: [MIT License](LICENSE) · Dataset: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)

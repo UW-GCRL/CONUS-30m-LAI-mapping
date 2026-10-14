@@ -168,8 +168,8 @@ footer a{color:var(--ink-soft)}
     <div class="facts">
       <div class="fact"><div class="n">30 m</div><div class="l">Landsat resolution</div></div>
       <div class="fact"><div class="n">276</div><div class="l">monthly images<br>Jan 2000 – Dec 2022</div></div>
-      <div class="fact"><div class="n">0.88</div><div class="l">R² vs field LAI<br>(algorithm)</div></div>
-      <div class="fact"><div class="n">0.77</div><div class="l">R² vs MODIS<br>(this product)</div></div>
+      <div class="fact"><div class="n">0.78</div><div class="l">R² vs field PAI<br>(this product)</div></div>
+      <div class="fact"><div class="n">0.77</div><div class="l">R² vs MODIS<br>(consistency)</div></div>
       <div class="fact"><div class="n">~1.9 TB</div><div class="l">open, gap-filled<br>+ QA &amp; nvalid</div></div>
     </div>
   </div>
@@ -238,8 +238,8 @@ footer a{color:var(--ink-soft)}
     <div class="sec-head">
       <p class="eyebrow">The data, seen</p>
       <h2>Climatology, continuity, and agreement</h2>
-      <p>Three views of the product: its seasonal spatial pattern, its stable 23-year record, and its
-        agreement with independent MODIS observations.</p>
+      <p>Three views of the product: its seasonal spatial pattern, its 23-year record, and its agreement
+        with field measurements at 27 NEON sites.</p>
     </div>
     <div class="figs">
       <figure class="figure">
@@ -251,14 +251,14 @@ footer a{color:var(--ink-soft)}
       <figure class="figure">
         <img src="figures/timeseries.png" alt="CONUS mean LAI time series for the retrieved and gap-filled products">
         <figcaption><b>CONUS mean LAI, 2000–2022.</b> (a) retrieved and (b) gap-filled. A consistent seasonal
-          cycle with low interannual variability and no sensor-transition artifacts; the retrieved product
-          preserves the 2012 drought minimum.</figcaption>
+          cycle with low interannual variability and no obvious step change at sensor transitions; the retrieved product
+          preserves the 2012 drought minimum, which the gap-filled product damps.</figcaption>
       </figure>
       <figure class="figure">
-        <img src="figures/validation.png" alt="Cross-comparison with MODIS LAI by plant functional type before and after gap-filling">
-        <figcaption><b>Cross-comparison with MODIS (MOD15A2H).</b> Per-PFT R² and RMSE, before and after
-          gap-filling, with the 30 m product aggregated to the 500 m MODIS grid. Agreement is stable and
-          gap-filling adds no measurable bias.</figcaption>
+        <img src="figures/field_validation.png" alt="Retrieved LAI against GBOV field plant area index at 27 NEON sites, overall and by vegetation type">
+        <figcaption><b>Field validation of the released product.</b> Retrieved LAI against GBOV field plant area
+          index (6,195 plot-dates, 27 NEON sites, 2013–2022): R² = 0.78, RMSE = 1.06 m² m⁻². LAI levels off near
+          5–6 m² m⁻² in dense forests, where field PAI (which includes wood) reaches about 9.</figcaption>
       </figure>
     </div>
   </div>
@@ -269,20 +269,19 @@ footer a{color:var(--ink-soft)}
     <div class="sec-head">
       <p class="eyebrow">How good is it</p>
       <h2>Accuracy, honestly stated</h2>
-      <p>Two independent checks: the algorithm against ground measurements, and this delivered product against
-        an independent satellite record.</p>
+      <p>Checks of the delivered product: against field measurements at 27 NEON sites, against 20 m reference
+        maps, and for consistency with MODIS LAI, which also supplied the training targets.</p>
     </div>
     <div class="acc">
-      <div class="metric"><div class="v">0.88</div><div class="k">R² vs 1,968 field PAI measurements (algorithm, Kang 2021)</div></div>
-      <div class="metric"><div class="v">0.80</div><div class="k">RMSE vs field (m² m⁻²)</div></div>
-      <div class="metric"><div class="v">0.77</div><div class="k">R² vs MODIS, scale-matched (this product)</div></div>
-      <div class="metric"><div class="v">0.83</div><div class="k">RMSE vs MODIS (m² m⁻²)</div></div>
+      <div class="metric"><div class="v">0.78</div><div class="k">R² vs 6,195 field PAI measurements, 27 NEON sites (this product)</div></div>
+      <div class="metric"><div class="v">1.06</div><div class="k">RMSE vs field (m² m⁻²)</div></div>
+      <div class="metric"><div class="v">0.79</div><div class="k">R² vs GBOV 20 m reference maps (30 m pixels)</div></div>
+      <div class="metric"><div class="v">0.77</div><div class="k">R² vs MODIS, scale-matched (consistency check)</div></div>
     </div>
     <div class="callout">
-      Accuracy is <b>competitive with established LAI products</b> and stable across the 2000–2005, 2006–2018,
-      and 2019–2022 periods. As with all optical LAI, agreement is strongest in shrubland and grassland and
-      weakest in dense evergreen forest. The gap-filled product is spatially and temporally complete but damps
-      interannual extremes, so anomaly studies should use the retrieved product together with the nvalid layer.
+      Agreement with MODIS is similar across the 2000–2005, 2006–2018, and 2019–2022 periods. Field errors are
+      largest in open-canopy evergreen forests, and LAI saturates near 5–6 m² m⁻² in dense canopies. The gap-filled product is spatially and temporally complete but damps
+      interannual extremes, so anomaly studies should use retrieved values (QA = 0) together with the nvalid layer.
     </div>
   </div>
 </section>

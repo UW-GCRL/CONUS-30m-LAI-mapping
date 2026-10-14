@@ -3,6 +3,9 @@
 // ============================================================
 // Data: projects/ee-hyou34/assets/CONUS_Monthly_LAI_30m  (gap-filled, 276 monthly images)
 //   Companions: ..._QA (gap-fill flags, 276)  |  ..._nvalid (valid obs months/yr, 23)
+//   QA: 0 retrieved | 1 linear interpolation within the year | 2/3 climatology fill in a pixel-year
+//   with >=3 / 1-2 valid months | 4 spatial-fallback climatology (<3 valid years for that month)
+//   | 255 unfilled (no valid month in the pixel-year). Retrieved LAI = LAI where QA == 0.
 // Encoding: int16, scale 0.001 (LAI = value*0.001); NoData = -32768.
 // Projection: NAD83 / Conus Albers (EPSG:5070), 30 m.
 // Retrieval: Landsat 5/7/8/9 C2 L2 via the biome-stratified Random Forest of Kang et al. (2021);
@@ -22,7 +25,7 @@ var VIS = {
         labels: ['0','1','2','3','4','5','6'], name: 'LAI (m² m⁻²)'},
   QA:  {min: 0, max: 5,
         palette: ['#4d4d4d','#2c7bb6','#abd9e9','#fdae61','#d7191c','#bdbdbd'],
-        labels: ['0 orig','1 interp','2 clim≥3y','3 clim1-2y','4 spatial','255 none'], name: 'QA code'},
+        labels: ['0 retrieved','1 interp','2 clim (≥3 valid mo)','3 clim (1-2 valid mo)','4 spatial fallback','255 unfilled'], name: 'QA code'},
   NVALID: {min: 0, max: 12,
         palette: ['#d7191c','#fdae61','#ffffbf','#a6d96a','#1a9641'],
         labels: ['0','3','6','9','12'], name: 'Valid months / yr'}
