@@ -39,14 +39,14 @@ QA_CODES = ("0 retrieved value (not filled); 1 linear interpolation between two 
             "valid month in the pixel-year, including non-vegetated pixels and water)")
 PROPS = {
     "CONUS_Monthly_LAI_30m": dict(COMMON, nodata_value=-32768, projection=PROJ, description=(
-        "Monthly gap-filled 30-m Leaf Area Index (LAI) over the contiguous United States, 2000-2022. "
-        "int16, scale factor 0.001 (LAI = value*0.001); pixels without a value (unfilled pixel-years, "
-        "outside the data domain) are masked (stored -32768). Retrieved (not gap-filled) LAI = this "
-        "collection where the companion QA = 0. GeoTIFF: downloads write masked pixels with their "
-        "stored values, so a mask added with updateMask is lost unless the image is unmasked; export "
-        "image.unmask(-32768) with formatOptions {noData: -32768} on the native grid (for retrieved LAI: "
-        "LAI.updateMask(QA.eq(0)).unmask(-32768)). Companion QA, nvalid, and obscount collections. "
-        "Code, methods, and documentation: " + GH)),
+        "Monthly gap-filled 30-m Leaf Area Index (LAI) for the contiguous United States, January 2000 "
+        "to December 2022 (276 images; band b1). LAI was retrieved from Landsat 5, 7, 8, and 9 with the "
+        "Random Forest algorithm of Kang et al. (2021); gaps were filled with a climatology-anchored "
+        "temporal method, and retrieved values are unchanged.\n\n"
+        "LAI = value × 0.001 (int16). No-data: -32768 (masked). Retrieved (not gap-filled) LAI: pixels "
+        "where CONUS_Monthly_LAI_30m_QA equals 0.\n\n"
+        "Documentation and export settings: " + GH + "\n"
+        "Citation: " + COMMON["citation"])),
     "CONUS_Monthly_LAI_30m_QA": dict(COMMON, qa_codes=QA_CODES, projection=PROJ, description=(
         "Gap-fill quality-assurance layer (uint8) for CONUS_Monthly_LAI_30m. Codes: " + QA_CODES +
         ". Code 255 is masked. GeoTIFF: 8-bit downloads declare NoData = 0, which would hide code 0, "
