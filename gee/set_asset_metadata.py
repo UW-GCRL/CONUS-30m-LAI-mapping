@@ -18,7 +18,7 @@ import ee
 ee.Initialize(project="ee-hyou34")
 BASE = "projects/ee-hyou34/assets"
 GH = "https://github.com/UW-GCRL/CONUS-30m-LAI-mapping"
-DOI = "10.5281/zenodo.22292385"
+DOI = "10.5281/zenodo.23374236"
 
 COMMON = {
     "github_repository": GH,

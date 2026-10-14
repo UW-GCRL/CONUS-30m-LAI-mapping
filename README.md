@@ -179,13 +179,13 @@ R² is the squared Pearson correlation; RMSE and bias are in m² m⁻² (bias = 
   products" and "Exporting to GeoTIFF" above.
 - **Observation count:** `…/CONUS_Monthly_LAI_30m_obscount`, 276 monthly images of the number of
   cloud-free Landsat observations, on a 500 m grid (float, EPSG:5070).
-- Dataset record (DOI): https://doi.org/10.5281/zenodo.22292385 (Zenodo; metadata and access information).
+- Dataset record (DOI): https://doi.org/10.5281/zenodo.23374236 (Zenodo; metadata and access information).
 
 ## Citation
 If you use this dataset or code, please cite the data record:
 
 > You, H., Kang, Y., & Chen, M. (2026). Monthly 30-m Leaf Area Index Dataset for the Contiguous United
-> States from 2000 to 2022. Zenodo. https://doi.org/10.5281/zenodo.22292385
+> States from 2000 to 2022. Zenodo. https://doi.org/10.5281/zenodo.23374236
 
 Data descriptor (in review): You, H., Kang, Y., & Chen, M. Monthly 30-m Leaf Area Index Dataset for the
 Contiguous United States from 2000 to 2022. *Scientific Data*.
