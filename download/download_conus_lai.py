@@ -2,6 +2,14 @@
 Batch-download the CONUS_Monthly_LAI_30m ImageCollection from Earth Engine
 to local GeoTIFFs, one file per monthly image -- PARALLEL version.
 
+The collection holds the gap-filled LAI (int16, LAI = value * 0.001) on its native
+30 m grid (Albers Equal Area, WGS 84 datum, EPSG:5070 parameters). geedim writes the
+stored values and declares NoData = -32768 (its default for int16), so pixels without
+a value are -32768 in the files, as in the product. Retrieved (not gap-filled) LAI is
+where the companion CONUS_Monthly_LAI_30m_QA image is 0. Note that geedim declares
+NoData = 0 for uint8, which would hide QA code 0; for QA files, reset NoData to 255
+(e.g. gdal_edit.py -a_nodata 255 file.tif).
+
 Speed strategy: the bottleneck is per-tile round-trip latency to Earth Engine,
 not local CPU or network bandwidth. So we (a) run several images concurrently
 and (b) use many tile-threads per image, keeping lots of requests in flight.
@@ -27,7 +35,8 @@ import ee
 from geedim.download import BaseImage
 
 ASSET   = "projects/ee-hyou34/assets/CONUS_Monthly_LAI_30m"
-OUTDIR  = r"K:\Hangkai\CONUS_LAI"
+# not K:\Hangkai\CONUS_LAI, which holds the retrieved-only mosaics under the same file names
+OUTDIR  = r"K:\Hangkai\CONUS_LAI_gapfilled_download"
 PROJECT = "ee-hyou34"
 
 IMG_WORKERS  = int(os.environ.get("LAI_IMG_WORKERS", "4"))

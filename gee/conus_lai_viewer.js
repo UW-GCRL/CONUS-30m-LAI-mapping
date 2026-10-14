@@ -6,8 +6,8 @@
 //   QA: 0 retrieved | 1 linear interpolation within the year | 2/3 climatology fill in a pixel-year
 //   with >=3 / 1-2 valid months | 4 spatial-fallback climatology (<3 valid years for that month)
 //   | 255 unfilled (no valid month in the pixel-year). Retrieved LAI = LAI where QA == 0.
-// Encoding: int16, scale 0.001 (LAI = value*0.001); NoData = -32768.
-// Projection: NAD83 / Conus Albers (EPSG:5070), 30 m.
+// Encoding: int16, scale 0.001 (LAI = value*0.001); NoData = -32768 (masked; QA 255, nvalid 0).
+// Grid: Albers Equal Area Conic, WGS 84 datum, EPSG:5070 parameters; 30 m, origin (-2417805, 3321225).
 // Retrieval: Landsat 5/7/8/9 C2 L2 via the biome-stratified Random Forest of Kang et al. (2021);
 //   MODIS LAI is the training target only. Gaps filled with a climatology-anchored temporal method.
 // Code & docs: https://github.com/UW-GCRL/CONUS-30m-LAI-mapping
@@ -40,7 +40,7 @@ var marker = null;
 // UI widgets
 // ============================================================
 var title = ui.Label('CONUS Monthly LAI — 30 m, 2000–2022', {fontSize:'20px', fontWeight:'bold', margin:'10px 0 0 10px'});
-var subtitle = ui.Label('Landsat-based LAI (Kang et al. 2021), gap-filled  |  int16 × 0.001 = LAI  |  EPSG:5070',
+var subtitle = ui.Label('Landsat-based LAI (Kang et al. 2021), gap-filled  |  int16 × 0.001 = LAI  |  30 m Albers (WGS 84)',
                         {fontSize:'12px', color:'#555', margin:'0 0 8px 10px'});
 
 var layerSelect = ui.Select({items:['LAI','QA','NVALID'], value:'LAI', style:{margin:'2px 10px', stretch:'horizontal'}});
@@ -147,14 +147,16 @@ var dlCode  = ui.Label('', {fontSize:'10px', margin:'2px 10px', whiteSpace:'pre'
 function updateDownload() {
   var yr = state.year, mo = monthNames[state.month-1];
   dlCode.setValue(
-    'Export.image.toDrive({\n'+
-    '  image: ee.ImageCollection(\n'+
+    'var img = ee.ImageCollection(\n'+
     '    "projects/ee-hyou34/assets/CONUS_Monthly_LAI_30m")\n'+
     '    .filter(ee.Filter.eq("year", '+yr+'))\n'+
-    '    .filter(ee.Filter.eq("month", '+state.month+')).first(),\n'+
-    '  description: "LAI_'+yr+'_'+mo+'",\n'+
-    '  region: geometry, crs: "EPSG:5070", scale: 30, maxPixels: 1e13\n'+
-    '});  // int16, LAI = value * 0.001');
+    '    .filter(ee.Filter.eq("month", '+state.month+')).first();\n'+
+    'var grid = img.projection().getInfo();  // native 30 m grid\n'+
+    'Export.image.toDrive({\n'+
+    '  image: img.unmask(-32768), description: "LAI_'+yr+'_'+mo+'",\n'+
+    '  region: geometry, crs: grid.wkt, crsTransform: grid.transform,\n'+
+    '  maxPixels: 1e13, formatOptions: {noData: -32768}\n'+
+    '});  // int16, LAI = value * 0.001; -32768 = no value');
 }
 
 // ============================================================

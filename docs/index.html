@@ -218,7 +218,7 @@ footer a{color:var(--ink-soft)}
         <dt>Coverage</dt><dd>CONUS</dd>
         <dt>Period</dt><dd>2000–2022</dd>
         <dt>Cadence</dt><dd>monthly (276)</dd>
-        <dt>Projection</dt><dd><span class="mono">EPSG:5070</span></dd>
+        <dt>Projection</dt><dd>Albers Equal Area, WGS 84 datum (<span class="mono">EPSG:5070</span> parameters)</dd>
         <dt>Type</dt><dd>int16, ×0.001</dd>
         <dt>No-data</dt><dd><span class="mono">−32768</span></dd>
         <dt>License</dt><dd>CC BY 4.0</dd>
@@ -304,15 +304,19 @@ footer a{color:var(--ink-soft)}
       <a class="tile" href="https://doi.org/10.5281/zenodo.22292385">
         <h3>Archived dataset (DOI) ↗</h3><p><span class="mono">10.5281/zenodo.22292385</span> · Zenodo</p></a>
     </div>
-    <pre>// Earth Engine — one monthly image (int16, LAI = value * 0.001)
+    <pre>// Earth Engine — one monthly image (int16, LAI = value * 0.001; -32768 = no value)
 var lai = ee.ImageCollection('projects/ee-hyou34/assets/CONUS_Monthly_LAI_30m')
   .filter(ee.Filter.eq('year', 2010))
   .filter(ee.Filter.eq('month', 7))
   .first();
+var grid = lai.projection().getInfo();   // native 30 m grid, no resampling
 Export.image.toDrive({
-  image: lai, description: 'LAI_2010_Jul',
-  region: geometry, crs: 'EPSG:5070', scale: 30, maxPixels: 1e13
-});</pre>
+  image: lai.unmask(-32768), description: 'LAI_2010_Jul',
+  region: geometry, crs: grid.wkt, crsTransform: grid.transform, maxPixels: 1e13,
+  formatOptions: {cloudOptimized: true, noData: -32768}
+});
+// retrieved LAI only: lai.updateMask(qa.eq(0)).unmask(-32768), qa = the matching ..._QA image;
+// QA export: qa.unmask(255) with formatOptions {noData: 255}</pre>
   </div>
 </section>
 

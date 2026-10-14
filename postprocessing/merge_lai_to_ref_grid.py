@@ -7,15 +7,23 @@ CONUS-wide monthly mosaic aligned to a reference grid, in the delivered encoding
 Encoding
 --------
 Per-state export tiles (input):  band 1 = LAI as uint16, scale factor 0.01
-    (LAI x100); masked (cloud/shadow/water) and non-vegetated pixels are 0.
-    A second uint16 obs_count band may be present but is not required here.
-Delivered CONUS mosaic (output): int16, single band, scale factor 0.001
-    (LAI x1000). Unobserved and non-vegetated pixels are 0; valid LAI >= 0.1.
+    (LAI x100), EPSG:5070; masked (cloud/shadow/water) and non-vegetated pixels
+    are 0. A second uint16 obs_count band is present but not used here.
+CONUS mosaic (output): int16, single band, scale factor 0.001 (LAI x1000), on the
+    reference grid. Pixels without a valid retrieval (gaps, non-vegetated pixels,
+    and pixels outside every state tile) are written as -32768, which is also the
+    declared GeoTIFF NoData value. Valid retrieved LAI is >= 0.1 (stored >= 100).
 The x100 -> x1000 re-encoding is a fixed integer multiply (SCALE_MULT = 10).
 
+The output grid (CRS, transform, size) is copied from the reference raster. For the
+released product this is an Albers Equal Area Conic grid on the WGS 84 datum with
+the EPSG:5070 projection parameters (standard parallels 29.5 N / 45.5 N, latitude
+of origin 23 N, central meridian 96 W), 30 m, origin (-2417805, 3321225).
+
 These retrieved mosaics are the input to the gap-filling step
-(``gapfill/gapfill_lai.py``), which produces the gap-filled product (also int16,
-LAI x1000) with unfilled pixels set to -32768.
+(``gapfill/gapfill_lai.py``), which treats any value <= 0 as missing and produces
+the gap-filled product (int16, LAI x1000, unfilled = -32768). Earlier mosaics that
+stored missing pixels as 0 therefore give the same gap-filled output.
 
 Usage
 -----
@@ -26,12 +34,11 @@ Configure the paths in the ``__main__`` block at the bottom.
 Algorithm
 ---------
 1. Read the reference raster (CRS, transform, width, height).
-2. Pre-fill the int16 output raster with 0.
+2. Pre-fill the int16 output raster with -32768 (NoData).
 3. For each per-state tile:
    a. Warp band 1 (LAI x100) to the reference grid via WarpedVRT (nearest).
    b. Process block-by-block (default 512x512 pixels).
-   c. Re-encode: value = round(LAI_x100 * 10) as int16 where valid (LAI_x100 > 0),
-      else 0.
+   c. Re-encode: value = round(LAI_x100 * 10) as int16 where valid (LAI_x100 > 0).
    d. Write valid pixels to the output (merge policy: last-one-wins).
 4. Build overview levels (2, 4, 8, 16, 32) for fast display.
 
@@ -54,7 +61,7 @@ from rasterio.windows import Window
 from rasterio.vrt import WarpedVRT
 from tqdm import tqdm
 
-NODATA = -32768          # declared no-data of the delivered files (retrieved gaps are stored as 0)
+NODATA = -32768          # value written for pixels without a valid retrieval, and declared as NoData
 SCALE_MULT = 10          # per-state LAI x100  ->  delivered LAI x1000
 
 
@@ -71,8 +78,8 @@ def merge_lai_to_ref_grid(
     scale_mult=SCALE_MULT,
 ):
     """
-    Merge per-state LAI tiles onto the exact grid of ref_tif and write the delivered
-    int16 (LAI x1000) CONUS mosaic; unobserved and non-vegetated pixels are 0.
+    Merge per-state LAI tiles onto the exact grid of ref_tif and write the int16
+    (LAI x1000) CONUS mosaic; pixels without a valid retrieval are -32768 (NoData).
 
     Parameters
     ----------
@@ -88,7 +95,7 @@ def merge_lai_to_ref_grid(
         Tile size (pixels) for block-by-block processing.
     prefer : str
         Merge policy: 'src' = last-one-wins (overwrites); 'dest' = first-one-wins
-        (fills only where the output is still 0).
+        (fills only where the output is still NoData).
     resampling : rasterio.enums.Resampling
         Resampling for warping (default: nearest, to preserve 30 m values).
     compress : str
@@ -130,9 +137,9 @@ def merge_lai_to_ref_grid(
     out_tif = Path(out_tif)
     out_tif.parent.mkdir(parents=True, exist_ok=True)
 
-    # Step 1: create output raster pre-filled with 0 (unobserved / non-vegetation)
+    # Step 1: create output raster pre-filled with NoData (-32768)
     with rasterio.open(out_tif, "w", **profile) as dst_w:
-        blank = np.zeros((1, blocksize, blocksize), dtype="int16")
+        blank = np.full((1, blocksize, blocksize), NODATA, dtype="int16")
         for row in range(0, height, blocksize):
             h = min(blocksize, height - row)
             for col in range(0, width, blocksize):
@@ -164,15 +171,15 @@ def merge_lai_to_ref_grid(
                             lai = vrt.read(1, window=win)          # LAI x100 (float32)
                             valid = np.isfinite(lai) & (lai > 0)
                             src_i16 = np.where(
-                                valid, np.rint(lai * scale_mult), 0
-                            ).astype(np.int16)                     # gaps -> 0
+                                valid, np.rint(lai * scale_mult), NODATA
+                            ).astype(np.int16)                     # gaps -> NoData
 
                             dest_block = dst.read(1, window=win)
                             out_block = dest_block.copy()
                             if prefer == "src":
                                 out_block[valid] = src_i16[valid]
                             elif prefer == "dest":
-                                fill = (dest_block == 0) & valid
+                                fill = (dest_block == NODATA) & valid
                                 out_block[fill] = src_i16[fill]
                             else:
                                 raise ValueError("prefer must be 'src' or 'dest'")

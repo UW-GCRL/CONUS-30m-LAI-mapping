@@ -14,16 +14,16 @@ per-year count of valid months (**nvalid**).
 | Spatial resolution | 30 m |
 | Temporal coverage | 2000–2022 |
 | Temporal resolution | Monthly (276 months) |
-| Projection | EPSG:5070 (NAD83 / Conus Albers) |
+| Projection / grid | Albers Equal Area Conic on the WGS 84 datum, with the EPSG:5070 (NAD83 / Conus Albers) projection parameters (standard parallels 29.5° N and 45.5° N, latitude of origin 23° N, central meridian 96° W); 30 m pixels, grid origin (−2417805, 3321225), 160,169 × 105,432 pixels |
 | Storage / scale | **int16**, **scale factor 0.001** (real LAI = stored value × 0.001; valid LAI > 0) |
-| No-data | retrieved product: gaps **and** non-vegetated pixels are stored as **0** (valid LAI ≥ 0.1, so 0 is unambiguous). Gap-filled product: pixel-years without any valid month (including non-vegetated pixels and water) remain unfilled and are **−32768** |
+| No-data | **−32768** in both LAI products: pixels without a value (unfilled pixel-years, which include non-vegetated pixels and water, and the area outside CONUS) are masked in Earth Engine and are −32768 (declared NoData) in GeoTIFF exports made as shown under "Exporting to GeoTIFF". QA: 255 (masked). nvalid: 0 (masked) |
 | Format | Earth Engine ImageCollections (export to GeoTIFF from Earth Engine) |
 
 Two LAI products:
 - **Retrieved LAI**: the Random Forest retrieval, monthly median of valid retrievals. Pixel-months without
-  a valid retrieval (cloud, SLC-off, no observation) and non-vegetated pixels are 0. It equals the
-  gap-filled LAI where QA = 0, so it can be reconstructed from the published collections:
-  `LAI.updateMask(QA.eq(0)).unmask(0)`.
+  a valid retrieval (cloud, SLC-off, no observation) and non-vegetated pixels have no value. It equals
+  the gap-filled LAI where QA = 0, so it is obtained from the published collections as
+  `LAI.updateMask(QA.eq(0))` (−32768 elsewhere when exported as shown below).
 - **Gap-filled LAI**: the retrieved values preserved exactly, with gaps filled by a climatology-anchored
   temporal method (`gapfill/`); every value is labelled in the QA layer.
 
@@ -37,7 +37,35 @@ Two LAI products:
 | 4 | climatology fill using the spatial-fallback (block) climatology, because fewer than three years were valid for that calendar month |
 | 255 | not filled: no valid month in the pixel-year (includes non-vegetated pixels and water) |
 
-**nvalid** gives, per pixel per year, the number of months with a valid retrieval (0–12).
+**nvalid** gives, per pixel per year, the number of months with a valid retrieval (1–12; pixel-years
+with no valid month are masked, stored 0). In the released files, LAI = −32768, QA = 255, and nvalid = 0
+mark exactly the same pixels.
+
+### Exporting to GeoTIFF
+Earth Engine GeoTIFF downloads write masked pixels with their stored values, so a mask added with
+`updateMask` is lost unless the image is unmasked, and 8-bit downloads declare NoData = 0, which would
+hide QA code 0. Unmask to the NoData value, declare it, and export on the native grid (no resampling):
+
+```javascript
+var LAI = ee.ImageCollection('projects/ee-hyou34/assets/CONUS_Monthly_LAI_30m')
+  .filter(ee.Filter.eq('year', 2010)).filter(ee.Filter.eq('month', 7)).first();
+var QA = ee.ImageCollection('projects/ee-hyou34/assets/CONUS_Monthly_LAI_30m_QA')
+  .filter(ee.Filter.eq('year', 2010)).filter(ee.Filter.eq('month', 7)).first();
+var grid = LAI.projection().getInfo();   // native grid: crs = grid.wkt, crsTransform = grid.transform
+
+// gap-filled LAI (int16, LAI = value * 0.001; -32768 = no value)
+Export.image.toDrive({image: LAI.unmask(-32768), description: 'LAI_2010_Jul', region: geometry,
+  crs: grid.wkt, crsTransform: grid.transform, maxPixels: 1e13,
+  formatOptions: {cloudOptimized: true, noData: -32768}});
+// retrieved LAI only (-32768 where QA != 0)
+Export.image.toDrive({image: LAI.updateMask(QA.eq(0)).unmask(-32768), description: 'LAIretrieved_2010_Jul',
+  region: geometry, crs: grid.wkt, crsTransform: grid.transform, maxPixels: 1e13,
+  formatOptions: {cloudOptimized: true, noData: -32768}});
+// QA (uint8; 255 = not filled)
+Export.image.toDrive({image: QA.unmask(255), description: 'QA_2010_Jul', region: geometry,
+  crs: grid.wkt, crsTransform: grid.transform, maxPixels: 1e13,
+  formatOptions: {cloudOptimized: true, noData: 255}});
+```
 
 ## Repository Structure
 
@@ -90,8 +118,9 @@ Monthly LAI is retrieved state-by-state with the **biome-stratified Random Fores
 Each run processes one state × one year → 12 monthly GeoTIFFs.
 
 ### 2 — CONUS mosaicking (Python) — `postprocessing/merge_lai_to_ref_grid.py`
-State tiles are warped (nearest-neighbor) onto the common EPSG:5070 CONUS reference grid and merged
-(valid-wins) into 12 monthly mosaics per year. June 2022 was re-exported and reconciled separately
+State tiles (EPSG:5070, 30 m) are warped (nearest-neighbor) onto the CONUS reference grid (see
+Projection / grid above) and merged (valid-wins) into 12 monthly mosaics per year; pixels without a
+valid retrieval are −32768. June 2022 was re-exported and reconciled separately
 via `build_june2022_conus.py`.
 
 ### 3 — Gap-filling (Python) — `gapfill/gapfill_lai.py`
@@ -143,7 +172,8 @@ R² is the squared Pearson correlation; RMSE and bias are in m² m⁻² (bias = 
 - **GEE asset (ImageCollection):** `projects/ee-hyou34/assets/CONUS_Monthly_LAI_30m` — 276 monthly gap-filled LAI images.
   - https://code.earthengine.google.com/?asset=projects/ee-hyou34/assets/CONUS_Monthly_LAI_30m
 - Companion **QA** and **nvalid** collections: `…/CONUS_Monthly_LAI_30m_QA`, `…/CONUS_Monthly_LAI_30m_nvalid`.
-- **Retrieved LAI:** the gap-filled LAI where QA = 0 (0 elsewhere); see "Two LAI products" above.
+- **Retrieved LAI:** the gap-filled LAI where QA = 0 (−32768 elsewhere when exported); see "Two LAI
+  products" and "Exporting to GeoTIFF" above.
 - **Observation count:** `…/CONUS_Monthly_LAI_30m_obscount`, 276 monthly images of the number of
   cloud-free Landsat observations, on a ~500 m grid (float, EPSG:5070).
 - Archived dataset (DOI): https://doi.org/10.5281/zenodo.22292385 (Zenodo).
