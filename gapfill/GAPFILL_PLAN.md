@@ -8,7 +8,7 @@ data-rich to chronically-gappy regions.
 
 ## Inputs
 - 276 monthly GeoTIFFs `YYYY_Mon_LAI.tif` (2000–2022 × 12), int16, nodata −32768,
-  160169 × 105432, EPSG:5070, in `K:\Hangkai\CONUS_LAI`.
+  160169 × 105432, Albers Equal Area (WGS 84 datum, EPSG:5070 parameters), in `K:\Hangkai\CONUS_LAI`.
 - `2022_Jun` currently empty at source → being regenerated (see JUNE2022 script). Gap-fill
   treats it as nodata until the corrected file is dropped in.
 

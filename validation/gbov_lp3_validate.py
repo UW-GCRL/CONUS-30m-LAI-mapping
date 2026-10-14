@@ -8,7 +8,7 @@ our Landsat input, are not used (their Sentinel-2 maps are excluded too). Pixels
 input/output out of range are excluded. Maps cover about 5 km x 5 km.
 
 For each site and calendar month, one LP-3 map is used: the date closest to mid-month whose
-valid fraction is >= MIN_VALID. The 20 m map is averaged onto the 30 m EPSG:5070 product grid
+valid fraction is >= MIN_VALID. The 20 m map is averaged onto the 30 m product grid (Albers, WGS 84 datum, EPSG:5070 parameters)
 (rasterio average resampling), then compared with the retrieved product (LAI > 0) of the same
 month. Pooled metrics use up to PIX_PER_MAP random pixels per map; per-map metrics describe the
 within-site spatial agreement (Pearson r and the ratio of spatial standard deviations).
